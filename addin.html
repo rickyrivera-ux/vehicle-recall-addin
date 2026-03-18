@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vehicle Recall Monitor</title>
+  <link rel="stylesheet" href="addin.css">
+</head>
+<body>
+  <div id="vehicle-recall-addin">
+
+    <!-- HEADER -->
+    <div class="recall-header">
+      <div>
+        <h1>Vehicle Recall Monitor</h1>
+        <div class="subtitle">Powered by Recall Masters &bull; Last scanned: March 17, 2026</div>
+      </div>
+    </div>
+
+    <!-- SUMMARY BAR -->
+    <div class="summary-bar" id="summary-bar"></div>
+
+    <!-- LIST VIEW -->
+    <div class="list-view" id="list-view">
+      <div class="filter-bar">
+        <input type="text" id="search-input" placeholder="Search by vehicle name, VIN, or make...">
+        <select id="filter-select">
+          <option value="all">All Vehicles</option>
+          <option value="with-recalls">With Open Recalls</option>
+          <option value="clear">No Recalls</option>
+        </select>
+      </div>
+      <table class="vehicle-table">
+        <thead>
+          <tr>
+            <th>Vehicle</th>
+            <th>VIN</th>
+            <th>Year / Make / Model</th>
+            <th>Open Recalls</th>
+            <th>Highest Severity</th>
+          </tr>
+        </thead>
+        <tbody id="vehicle-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- DETAIL VIEW -->
+    <div class="detail-view" id="detail-view">
+      <button class="back-btn" id="back-btn">&larr; Back to Fleet</button>
+      <div id="vehicle-detail-header" class="vehicle-detail-header"></div>
+      <div id="recall-cards"></div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script src="mock-data.js"></script>
+  <script src="addin.js"></script>
+  <script>
+    // Auto-init when viewed standalone (outside MyGeotab)
+    if (typeof geotab === "undefined") {
+      window.geotab = { addin: {} };
+    }
+    if (!geotab.addin._standaloneInitDone) {
+      geotab.addin._standaloneInitDone = true;
+      var app = geotab.addin.addin(null, null);
+      app.initialize(null, null, function () { app.focus(null, null); });
+    }
+  </script>
+</body>
+</html>

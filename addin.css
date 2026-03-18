@@ -1,0 +1,504 @@
+/* Vehicle Recall Monitor - Add-in Styles */
+
+:root {
+  --primary: #1a3a5c;
+  --primary-light: #2a5a8c;
+  --accent: #e67e22;
+  --bg: #f5f7fa;
+  --card-bg: #ffffff;
+  --text: #2c3e50;
+  --text-muted: #7f8c8d;
+  --border: #e1e8ed;
+  --success: #27ae60;
+  --danger: #e74c3c;
+  --warning: #f39c12;
+  --extreme-bg: #c0392b;
+  --high-bg: #e74c3c;
+  --moderate-bg: #e67e22;
+  --low-bg: #f1c40f;
+  --info-bg: #3498db;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+#vehicle-recall-addin {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+  padding: 24px;
+}
+
+/* Header */
+.recall-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.recall-header h1 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--primary);
+}
+.recall-header .subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Summary bar */
+.summary-bar {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.summary-card {
+  flex: 1;
+  background: var(--card-bg);
+  border-radius: 8px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+}
+.summary-card .label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.summary-card .value {
+  font-size: 28px;
+  font-weight: 700;
+}
+.summary-card .value.text-danger { color: var(--danger); }
+.summary-card .value.text-warning { color: var(--warning); }
+.summary-card .value.text-success { color: var(--success); }
+.summary-card .value.text-primary { color: var(--primary); }
+
+/* Search / filter */
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+.filter-bar input[type="text"] {
+  flex: 1;
+  max-width: 360px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+}
+.filter-bar input[type="text"]:focus {
+  border-color: var(--primary-light);
+}
+.filter-bar select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+}
+
+/* Vehicle list table */
+.vehicle-table {
+  width: 100%;
+  background: var(--card-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+.vehicle-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  background: #f8f9fa;
+  border-bottom: 1px solid var(--border);
+}
+.vehicle-table td {
+  padding: 14px 16px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.vehicle-table tr:last-child td {
+  border-bottom: none;
+}
+.vehicle-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.vehicle-table tbody tr:hover {
+  background: #f0f4f8;
+}
+.vin-text {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Recall count badges */
+.recall-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.recall-count-badge.has-recalls {
+  background: #fde8e8;
+  color: var(--danger);
+}
+.recall-count-badge.clear {
+  background: #e8f8f0;
+  color: var(--success);
+}
+
+/* Severity badges */
+.severity-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.5px;
+}
+.severity-extreme { background: var(--extreme-bg); }
+.severity-high { background: var(--high-bg); }
+.severity-moderate { background: var(--moderate-bg); }
+.severity-low { background: var(--low-bg); color: #333; }
+.severity-info { background: var(--info-bg); }
+
+/* Risk type tag */
+.risk-type-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 6px;
+}
+.risk-fire { background: #fff3e0; color: #e65100; }
+.risk-crash { background: #e3f2fd; color: #1565c0; }
+.risk-injury { background: #fce4ec; color: #c62828; }
+.risk-emissions { background: #e8f5e9; color: #2e7d32; }
+.risk-neutral { background: #f5f5f5; color: #616161; }
+
+/* Detail view */
+.detail-view {
+  display: none;
+}
+.detail-view.active {
+  display: block;
+}
+.list-view.hidden {
+  display: none;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--primary);
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: background 0.15s;
+}
+.back-btn:hover {
+  background: #f0f4f8;
+}
+
+.vehicle-detail-header {
+  background: var(--primary);
+  color: white;
+  padding: 20px 24px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+.vehicle-detail-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.vehicle-detail-header .vehicle-meta {
+  font-size: 14px;
+  opacity: 0.85;
+}
+.vehicle-detail-header .vehicle-meta span {
+  margin-right: 16px;
+}
+
+/* Recall detail card — matches Recall Masters layout */
+.recall-card {
+  background: var(--card-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.recall-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: var(--primary);
+  color: white;
+  flex-wrap: wrap;
+}
+.recall-card-header .component-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+.recall-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.recall-tag.safety {
+  background: #e74c3c;
+  color: white;
+}
+.recall-tag.voluntary {
+  background: #3498db;
+  color: white;
+}
+.recall-tag.warranty {
+  background: #8e44ad;
+  color: white;
+}
+.recall-tag.pre-inspection {
+  background: #e67e22;
+  color: white;
+}
+.recall-tag.stop-sale-tag {
+  background: #c0392b;
+  color: white;
+}
+.recall-tag.dont-drive-tag {
+  background: #7f0000;
+  color: white;
+}
+
+.recall-card-body {
+  padding: 20px;
+}
+
+/* Code row (NHTSA, OEM, scores) */
+.code-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.code-cell {
+  background: white;
+  padding: 10px 14px;
+}
+.code-cell .cell-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+}
+.code-cell .cell-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+.cell-value.score-high { color: var(--danger); }
+.cell-value.score-med { color: var(--warning); }
+.cell-value.score-low { color: var(--success); }
+
+/* Description / Risk / Remedy */
+.info-block {
+  margin-bottom: 14px;
+}
+.info-block .info-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.info-block .info-text {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Status flags row */
+.status-flags {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+.status-flag {
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.status-flag .flag-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 2px;
+}
+.status-flag .flag-value {
+  font-size: 14px;
+  font-weight: 700;
+}
+.flag-yes { background: #e8f8f0; }
+.flag-yes .flag-value { color: var(--success); }
+.flag-no { background: #f8f8f8; }
+.flag-no .flag-value { color: var(--text-muted); }
+.flag-limited { background: #fef9e7; }
+.flag-limited .flag-value { color: var(--warning); }
+.flag-danger { background: #fde8e8; }
+.flag-danger .flag-value { color: var(--danger); }
+
+/* Labor / cost row */
+.labor-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+.labor-cell {
+  background: white;
+  padding: 10px 14px;
+}
+.labor-cell .cell-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+}
+.labor-cell .cell-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+.cell-value.reimbursement {
+  color: var(--success);
+}
+
+/* Action row */
+.action-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: #f8f9fa;
+}
+.btn-work-request {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-work-request:hover {
+  background: #d35400;
+}
+.btn-work-request:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 14px 24px;
+  background: var(--primary);
+  color: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  z-index: 9999;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast.toast-success { border-left: 4px solid var(--success); }
+.toast.toast-error { border-left: 4px solid var(--danger); }
+
+/* Parts detail row */
+.parts-detail-row {
+  background: #f8f9fa;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-top: 16px;
+}
+.parts-detail-row .info-block {
+  margin-bottom: 8px;
+}
+.parts-detail-row .info-block:last-child {
+  margin-bottom: 0;
+}
+.info-text.mono {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 13px;
+}
+
+/* Recall metadata footer */
+.recall-meta {
+  display: flex;
+  gap: 20px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* No recalls message */
+.no-recalls-msg {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+.no-recalls-msg .check-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
