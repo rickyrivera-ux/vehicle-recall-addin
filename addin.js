@@ -1,6 +1,7 @@
 // Vehicle Recall Monitor — Add-in Logic
-// Uses mock data (no live API calls)
-// Field names aligned to Recall Masters API v2 spec (SSDG 3.0)
+// Recall data from mock-data.js (Recall Masters API v2 spec, SSDG 3.0)
+// Work Request creation uses real WOM API (MaintenanceIssue) when inside MyGeotab,
+// falls back to mock toast when running standalone on GitHub Pages.
 
 geotab.addin.addin = function (api, state) {
   "use strict";
@@ -9,6 +10,8 @@ geotab.addin.addin = function (api, state) {
   var currentView = "list";
   var createdWorkRequests = {};
   var initialized = false;
+  var geotabApi = null; // stored from lifecycle callbacks
+  var vehicleRecallEventTypeId = null; // cached after first lookup/create
 
   // DOM refs (resolved lazily in initialize)
   var summaryBar, listView, detailView, vehicleTbody, detailHeader,
@@ -250,19 +253,133 @@ geotab.addin.addin = function (api, state) {
     '</div>';
   }
 
+  // Map risk_rank to WOM severity
+  function riskRankToSeverity(rank) {
+    if (rank >= 5) return 400; // Critical
+    if (rank >= 4) return 300; // High
+    if (rank >= 3) return 200; // Medium
+    return 100; // Low
+  }
+
+  // Build plain-text description from all recalls for a vehicle
+  function buildIssueDescription(vehicle) {
+    var parts = [];
+    vehicle.recalls.forEach(function (r) {
+      parts.push(
+        "RECALL: " + r.name +
+        "\nNHTSA: " + (r.nhtsa_id || "N/A") +
+        " | Severity: " + getSeverityLabel(r.risk_rank) +
+        " | Risk Type: " + riskTypeLabel(r.risk_type) +
+        "\nDescription: " + r.description +
+        "\nRisk: " + r.risk +
+        "\nRemedy: " + r.remedy
+      );
+    });
+    parts.push("---\nView full recall details in Vehicle Recall Monitor add-in.");
+    return parts.join("\n\n---\n\n");
+  }
+
+  // Build recommendation from all recalls for a vehicle
+  function buildIssueRecommendation(vehicle) {
+    return vehicle.recalls.map(function (r) {
+      return r.name + ": " + r.remedy;
+    }).join("\n\n");
+  }
+
+  // Ensure "Vehicle Recall" EventType exists, return its ID via callback
+  function ensureEventType(callback) {
+    if (vehicleRecallEventTypeId) {
+      callback(null, vehicleRecallEventTypeId);
+      return;
+    }
+
+    geotabApi.call("Get", {
+      typeName: "EventType",
+      search: { name: "Vehicle Recall" }
+    }, function (results) {
+      if (results && results.length > 0) {
+        vehicleRecallEventTypeId = results[0].id;
+        callback(null, vehicleRecallEventTypeId);
+      } else {
+        // Create it
+        geotabApi.call("Add", {
+          typeName: "EventType",
+          entity: { name: "Vehicle Recall" }
+        }, function (id) {
+          vehicleRecallEventTypeId = id;
+          callback(null, id);
+        }, function (err) {
+          callback(err);
+        });
+      }
+    }, function (err) {
+      callback(err);
+    });
+  }
+
   // Handle "Create Work Request" click
   function handleCreateWorkRequest(recallId, vehicle, btn) {
     btn.disabled = true;
     btn.innerHTML = "Creating...";
 
-    setTimeout(function () {
-      createdWorkRequests[recallId] = true;
-      btn.innerHTML = "&#10003; Work Request Created";
-      showToast(
-        "Work Request created for " + vehicle.device.name + " — Recall #" + recallId,
-        "success"
-      );
-    }, 800);
+    // Standalone mode — keep mock behavior
+    if (!geotabApi) {
+      setTimeout(function () {
+        createdWorkRequests[recallId] = true;
+        btn.innerHTML = "&#10003; Work Request Created";
+        showToast(
+          "Work Request created for " + vehicle.device.name + " — Recall #" + recallId + " (mock)",
+          "success"
+        );
+      }, 800);
+      return;
+    }
+
+    // Real MyGeotab API path
+    ensureEventType(function (err, eventTypeId) {
+      if (err) {
+        btn.disabled = false;
+        btn.innerHTML = "Create Work Request";
+        showToast("Failed to create EventType: " + (err.message || err), "error");
+        return;
+      }
+
+      var maxRisk = vehicle.recalls.reduce(function (max, r) { return Math.max(max, r.risk_rank); }, 0);
+      var nhtsaIds = vehicle.recalls.map(function (r) { return r.nhtsa_id; }).join(", ");
+
+      geotabApi.call("Add", {
+        typeName: "MaintenanceIssue",
+        entity: {
+          device: { id: vehicle.device.id },
+          maintenanceType: { id: eventTypeId },
+          severity: riskRankToSeverity(maxRisk),
+          description: buildIssueDescription(vehicle),
+          recommendation: buildIssueRecommendation(vehicle),
+          metadata: {
+            "recall.nhtsa_ids": nhtsaIds,
+            "recall.risk_type": vehicle.recalls.map(function (r) { return r.risk_type; }).join(", "),
+            "recall.recall_count": String(vehicle.recall_count)
+          }
+        }
+      }, function () {
+        // Mark all recalls for this vehicle as created (dedup means one WR per vehicle)
+        vehicle.recalls.forEach(function (r) {
+          createdWorkRequests[r.recall_id] = true;
+        });
+        btn.innerHTML = "&#10003; Work Request Created";
+        showToast(
+          "Work Request created for " + vehicle.device.name + " (" + vehicle.recall_count + " recall" + (vehicle.recall_count !== 1 ? "s" : "") + ")",
+          "success"
+        );
+        // Disable all other recall buttons for this vehicle
+        var allBtns = recallCards.querySelectorAll(".btn-work-request");
+        allBtns.forEach(function (b) { b.disabled = true; b.innerHTML = "&#10003; Work Request Created"; });
+      }, function (err) {
+        btn.disabled = false;
+        btn.innerHTML = "Create Work Request";
+        showToast("Failed: " + (err.message || err), "error");
+      });
+    });
   }
 
   // Toast
@@ -303,10 +420,12 @@ geotab.addin.addin = function (api, state) {
 
   return {
     initialize: function (freshApi, freshState, callback) {
+      if (freshApi) { geotabApi = freshApi; }
       initApp();
       callback();
     },
     focus: function (freshApi, freshState) {
+      if (freshApi) { geotabApi = freshApi; }
       // Re-render on focus
       var fleet = getFleetData();
       renderSummary(fleet);

@@ -1,8 +1,8 @@
 // Mock fleet devices (matching real devices on geotabdemo55)
 var MOCK_DEVICES = [
-  { id: "b1", name: "318 - Walmart", vehicleIdentificationNumber: "1FTFW1ET5DFC10312" },
-  { id: "b2", name: "319 - Blumer", vehicleIdentificationNumber: "2GCEG25K081234567" },
-  { id: "b3", name: "320 - Nikita", vehicleIdentificationNumber: "3FA6P0H77HR283051" }
+  { id: "b117", name: "318 - Walmart", vehicleIdentificationNumber: "1FTFW1ET5DFC10312" },
+  { id: "b122", name: "319 - Blumer", vehicleIdentificationNumber: "2GCEG25K081234567" },
+  { id: "b123", name: "320 - Nikita", vehicleIdentificationNumber: "3FA6P0H77HR283051" }
 ];
 
 // Mock Recall Masters API v2 responses per VIN
