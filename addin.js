@@ -11,7 +11,7 @@ geotab.addin.addin = function (api, state) {
   var createdWorkRequests = {};
   var initialized = false;
   var geotabApi = null; // stored from lifecycle callbacks
-  var vehicleRecallEventTypeId = null; // cached after first lookup/create
+  var eventTypeCache = {}; // cached EventType IDs by name
 
   // DOM refs (resolved lazily in initialize)
   var summaryBar, listView, detailView, vehicleTbody, detailHeader,
@@ -261,52 +261,28 @@ geotab.addin.addin = function (api, state) {
     return 100; // Low
   }
 
-  // Build plain-text description from all recalls for a vehicle
-  function buildIssueDescription(vehicle) {
-    var parts = [];
-    vehicle.recalls.forEach(function (r) {
-      parts.push(
-        "RECALL: " + r.name +
-        "\nNHTSA: " + (r.nhtsa_id || "N/A") +
-        " | Severity: " + getSeverityLabel(r.risk_rank) +
-        " | Risk Type: " + riskTypeLabel(r.risk_type) +
-        "\nDescription: " + r.description +
-        "\nRisk: " + r.risk +
-        "\nRemedy: " + r.remedy
-      );
-    });
-    parts.push("---\nView full recall details in Vehicle Recall Monitor add-in.");
-    return parts.join("\n\n---\n\n");
-  }
 
-  // Build recommendation from all recalls for a vehicle
-  function buildIssueRecommendation(vehicle) {
-    return vehicle.recalls.map(function (r) {
-      return r.name + ": " + r.remedy;
-    }).join("\n\n");
-  }
-
-  // Ensure "Vehicle Recall" EventType exists, return its ID via callback
-  function ensureEventType(callback) {
-    if (vehicleRecallEventTypeId) {
-      callback(null, vehicleRecallEventTypeId);
+  // Ensure an EventType with the given name exists, return its ID via callback.
+  // Caches results so each name is only looked up / created once per session.
+  function ensureEventType(name, callback) {
+    if (eventTypeCache[name]) {
+      callback(null, eventTypeCache[name]);
       return;
     }
 
     geotabApi.call("Get", {
       typeName: "EventType",
-      search: { name: "Vehicle Recall" }
+      search: { name: name }
     }, function (results) {
       if (results && results.length > 0) {
-        vehicleRecallEventTypeId = results[0].id;
-        callback(null, vehicleRecallEventTypeId);
+        eventTypeCache[name] = results[0].id;
+        callback(null, results[0].id);
       } else {
-        // Create it
         geotabApi.call("Add", {
           typeName: "EventType",
-          entity: { name: "Vehicle Recall" }
+          entity: { name: name }
         }, function (id) {
-          vehicleRecallEventTypeId = id;
+          eventTypeCache[name] = id;
           callback(null, id);
         }, function (err) {
           callback(err);
@@ -317,10 +293,19 @@ geotab.addin.addin = function (api, state) {
     });
   }
 
-  // Handle "Create Work Request" click
+  // Handle "Create Work Request" click — one MaintenanceIssue per recall
   function handleCreateWorkRequest(recallId, vehicle, btn) {
     btn.disabled = true;
     btn.innerHTML = "Creating...";
+
+    // Find the specific recall
+    var recall = vehicle.recalls.find(function (r) { return String(r.recall_id) === String(recallId); });
+    if (!recall) {
+      btn.disabled = false;
+      btn.innerHTML = "Create Work Request";
+      showToast("Recall not found: " + recallId, "error");
+      return;
+    }
 
     // Standalone mode — keep mock behavior
     if (!geotabApi) {
@@ -328,52 +313,53 @@ geotab.addin.addin = function (api, state) {
         createdWorkRequests[recallId] = true;
         btn.innerHTML = "&#10003; Work Request Created";
         showToast(
-          "Work Request created for " + vehicle.device.name + " — Recall #" + recallId + " (mock)",
+          "Work Request created: RECALL: " + recall.name + " — " + vehicle.device.name + " (mock)",
           "success"
         );
       }, 800);
       return;
     }
 
-    // Real MyGeotab API path
-    ensureEventType(function (err, eventTypeId) {
+    // Maintenance Type = "RECALL: <specific recall name>"
+    var eventTypeName = "RECALL: " + recall.name;
+
+    ensureEventType(eventTypeName, function (err, eventTypeId) {
       if (err) {
         btn.disabled = false;
         btn.innerHTML = "Create Work Request";
-        showToast("Failed to create EventType: " + (err.message || err), "error");
+        showToast("Failed to create Maintenance Type: " + (err.message || err), "error");
         return;
       }
-
-      var maxRisk = vehicle.recalls.reduce(function (max, r) { return Math.max(max, r.risk_rank); }, 0);
-      var nhtsaIds = vehicle.recalls.map(function (r) { return r.nhtsa_id; }).join(", ");
 
       geotabApi.call("Add", {
         typeName: "MaintenanceIssue",
         entity: {
           device: { id: vehicle.device.id },
           maintenanceType: { id: eventTypeId },
-          severity: riskRankToSeverity(maxRisk),
-          description: buildIssueDescription(vehicle),
-          recommendation: buildIssueRecommendation(vehicle),
+          severity: riskRankToSeverity(recall.risk_rank),
+          source: "Vehicle Recall",
+          description: recall.description +
+            "\n\nRisk: " + recall.risk +
+            "\nRemedy: " + recall.remedy,
+          recommendation: recall.remedy,
           metadata: {
-            "recall.nhtsa_ids": nhtsaIds,
-            "recall.risk_type": vehicle.recalls.map(function (r) { return r.risk_type; }).join(", "),
-            "recall.recall_count": String(vehicle.recall_count)
+            "recall.source": "Vehicle Recall",
+            "recall.recall_id": String(recall.recall_id),
+            "recall.nhtsa_id": recall.nhtsa_id || "",
+            "recall.oem_id": recall.oem_id || "",
+            "recall.risk_type": recall.risk_type,
+            "recall.risk_rank": String(recall.risk_rank),
+            "recall.campaign_type": recall.campaign_type || "",
+            "recall.reimbursement": String(recall.reimbursement || 0)
           }
         }
       }, function () {
-        // Mark all recalls for this vehicle as created (dedup means one WR per vehicle)
-        vehicle.recalls.forEach(function (r) {
-          createdWorkRequests[r.recall_id] = true;
-        });
+        createdWorkRequests[recall.recall_id] = true;
         btn.innerHTML = "&#10003; Work Request Created";
         showToast(
-          "Work Request created for " + vehicle.device.name + " (" + vehicle.recall_count + " recall" + (vehicle.recall_count !== 1 ? "s" : "") + ")",
+          "Work Request created: RECALL: " + recall.name + " — " + vehicle.device.name,
           "success"
         );
-        // Disable all other recall buttons for this vehicle
-        var allBtns = recallCards.querySelectorAll(".btn-work-request");
-        allBtns.forEach(function (b) { b.disabled = true; b.innerHTML = "&#10003; Work Request Created"; });
       }, function (err) {
         btn.disabled = false;
         btn.innerHTML = "Create Work Request";
