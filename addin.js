@@ -337,7 +337,6 @@ geotab.addin.addin = function (api, state) {
           device: { id: vehicle.device.id },
           maintenanceType: { id: eventTypeId },
           severity: riskRankToSeverity(recall.risk_rank),
-          source: "Vehicle Recall",
           description: recall.description +
             "\n\nRisk: " + recall.risk +
             "\nRemedy: " + recall.remedy,
@@ -354,12 +353,40 @@ geotab.addin.addin = function (api, state) {
           }
         }
       }, function () {
-        createdWorkRequests[recall.recall_id] = true;
-        btn.innerHTML = "&#10003; Work Request Created";
-        showToast(
-          "Work Request created: RECALL: " + recall.name + " — " + vehicle.device.name,
-          "success"
-        );
+        // Source lives on MaintenanceWorkRequest (created by the system).
+        // Find the resulting WorkRequest and set Source = "Vehicle Recall".
+        geotabApi.call("Get", {
+          typeName: "MaintenanceWorkRequest",
+          search: { deviceSearch: { id: vehicle.device.id } }
+        }, function (workRequests) {
+          var wr = workRequests && workRequests.find(function (w) {
+            return w.maintenanceType && w.maintenanceType.id === eventTypeId;
+          });
+          if (wr) {
+            geotabApi.call("Set", {
+              typeName: "MaintenanceWorkRequest",
+              entity: {
+                id: wr.id,
+                source: "Vehicle Recall",
+                sourceDescription: "Vehicle Recall Monitor"
+              }
+            }, function () {}, function () {});
+          }
+          createdWorkRequests[recall.recall_id] = true;
+          btn.innerHTML = "&#10003; Work Request Created";
+          showToast(
+            "Work Request created: RECALL: " + recall.name + " — " + vehicle.device.name,
+            "success"
+          );
+        }, function () {
+          // Get failed — still mark as created
+          createdWorkRequests[recall.recall_id] = true;
+          btn.innerHTML = "&#10003; Work Request Created";
+          showToast(
+            "Work Request created: RECALL: " + recall.name + " — " + vehicle.device.name,
+            "success"
+          );
+        });
       }, function (err) {
         btn.disabled = false;
         btn.innerHTML = "Create Work Request";
