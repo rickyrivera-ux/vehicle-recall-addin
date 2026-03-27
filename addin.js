@@ -354,39 +354,41 @@ geotab.addin.addin = function (api, state) {
         }
       }, function () {
         // Source lives on MaintenanceWorkRequest (created by the system).
-        // Find the resulting WorkRequest and set Source = "Vehicle Recall".
-        geotabApi.call("Get", {
-          typeName: "MaintenanceWorkRequest",
-          search: { deviceSearch: { id: vehicle.device.id } }
-        }, function (workRequests) {
-          var wr = workRequests && workRequests.find(function (w) {
-            return w.maintenanceType && w.maintenanceType.id === eventTypeId;
+        // Wait briefly for the system to create it, then fetch the full entity
+        // and patch source before calling Set (Set requires the full entity).
+        setTimeout(function () {
+          geotabApi.call("Get", {
+            typeName: "MaintenanceWorkRequest",
+            search: { deviceSearch: { id: vehicle.device.id } }
+          }, function (workRequests) {
+            var wr = workRequests && workRequests.find(function (w) {
+              return w.maintenanceType && w.maintenanceType.id === eventTypeId;
+            });
+            if (wr) {
+              wr.source = "Vehicle Recall";
+              wr.sourceDescription = "Vehicle Recall Monitor";
+              geotabApi.call("Set", {
+                typeName: "MaintenanceWorkRequest",
+                entity: wr
+              }, function () {
+                console.log("[RecallAddin] WorkRequest source set to 'Vehicle Recall'", wr.id);
+              }, function (err) {
+                console.warn("[RecallAddin] Set source failed:", err);
+              });
+            } else {
+              console.warn("[RecallAddin] Could not find WorkRequest for eventTypeId:", eventTypeId);
+            }
+          }, function (err) {
+            console.warn("[RecallAddin] Get MaintenanceWorkRequest failed:", err);
           });
-          if (wr) {
-            geotabApi.call("Set", {
-              typeName: "MaintenanceWorkRequest",
-              entity: {
-                id: wr.id,
-                source: "Vehicle Recall",
-                sourceDescription: "Vehicle Recall Monitor"
-              }
-            }, function () {}, function () {});
-          }
-          createdWorkRequests[recall.recall_id] = true;
-          btn.innerHTML = "&#10003; Work Request Created";
-          showToast(
-            "Work Request created: RECALL: " + recall.name + " — " + vehicle.device.name,
-            "success"
-          );
-        }, function () {
-          // Get failed — still mark as created
-          createdWorkRequests[recall.recall_id] = true;
-          btn.innerHTML = "&#10003; Work Request Created";
-          showToast(
-            "Work Request created: RECALL: " + recall.name + " — " + vehicle.device.name,
-            "success"
-          );
-        });
+        }, 3000); // 3s delay — give system time to auto-create the WorkRequest
+
+        createdWorkRequests[recall.recall_id] = true;
+        btn.innerHTML = "&#10003; Work Request Created";
+        showToast(
+          "Work Request created: RECALL: " + recall.name + " — " + vehicle.device.name,
+          "success"
+        );
       }, function (err) {
         btn.disabled = false;
         btn.innerHTML = "Create Work Request";
